@@ -2,6 +2,9 @@
 
 export(do_sim)
 export(linkd)
+export(bcorr)
+export(mcorr)
+export(corplot)
 importFrom(stats,qnorm)
 importFrom(stats,rbinom)
 importFrom(stats,rnorm)
