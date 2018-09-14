@@ -40,11 +40,12 @@ create_01mat = function(L){
 
 imputemissing <- function(count_dframe,zero_one_dframe,tol=10^-4){
   nc <- ncol(zero_one_dframe)
-  
+  count_dframe = as.data.frame(count_dframe)
   flevs = 1:nrow(zero_one_dframe)
   indices = apply(count_dframe[,1:nc],1,function(d) find_pattern(zero_one_dframe,d))
   indexes = factor(unlist(indices),levels=flevs)
   oldprobs <- rep.int(1/nrow(zero_one_dframe),nrow(zero_one_dframe))
+  
   newcounts = unlist(mapply(function(counts,i) oldprobs[i]/sum(oldprobs[i])*counts,
                             count_dframe[,nc+1],indices))
   
@@ -383,6 +384,68 @@ gen_data <- function(means,correl=.1,nsample=500000, missingprobs){
   return(temp_dframe)
   
 }
+
+#Correlation residual plots
+
+#get pariwise baseline correlations between agreement fields
+bcorr = function(zero_one_dframe){
+  L = ncol(zero_one_dframe) - 1
+  counts = zero_one_dframe$counts
+  N = sum(counts)
+  corvec = numeric(.5*(L^2-L))
+  cnames = colnames(zero_one_dframe)
+  names(corvec) = unlist(sapply(1:(L-1), function(v) paste(cnames[v],cnames[(v+1):L],sep=':')))
+  ps = apply(zero_one_dframe[,1:L],2,function(v) sum((v==1) * counts) / N)
+  
+  ind = 1
+  for(i in 1:(L-1))
+    for(j in (i+1):L){
+      p_ij = sum((zero_one_dframe[,i] & zero_one_dframe[,j]) * counts) / N
+      corvec[ind] = (p_ij - ps[i]*ps[j])/sqrt(ps[j]*(1-ps[j])*ps[i]*(1-ps[i]))
+      ind = ind + 1
+    }
+  corvec
+}
+
+#get pariwise correlations between agreement fields predicted from model
+mcorr = function(fits,zero_one_dframe){
+  counts_m = exp(predict(fits$model_match))
+  counts_u = exp(predict(fits$model_mismatch))
+  p = fits$p
+  
+  L = ncol(zero_one_dframe) - 1
+  N_m = sum(counts_m)
+  N_u = sum(counts_u)
+  
+  corvec = numeric(.5*(L^2-L))
+  cnames = colnames(zero_one_dframe)
+  names(corvec) = unlist(sapply(1:(L-1), function(v) paste(cnames[v],cnames[(v+1):L],sep=':')))
+  ps = apply(zero_one_dframe[,1:L],2,function(v) p * sum((v==1) * counts_m) / N_m + 
+               (1-p) * sum((v==1) * counts_u) / N_u)
+  
+  ind = 1
+  for(i in 1:(L-1))
+    for(j in (i+1):L){
+      p_ij = p * sum((zero_one_dframe[,i] & zero_one_dframe[,j]) * counts_m) / N_m + (1-p) * 
+        sum((zero_one_dframe[,i] & zero_one_dframe[,j]) * counts_u) / N_u
+      corvec[ind] = (p_ij - ps[i]*ps[j])/sqrt(ps[j]*(1-ps[j])*ps[i]*(1-ps[i]))
+      ind = ind + 1
+    }
+  corvec
+}
+
+#plot correlation residuals
+corplot = function(fit,title=NULL){
+  modeled = fit$fitted_models
+  baseline = fit$imputed_freqs
+  
+  mcor = mcorr(modeled,baseline); bcor = bcorr(baseline)
+  labs = names(bcor)
+  ylim = c(min(mcor-bcor) - .25, max(mcor-bcor) + .25)
+  plot(mcor-bcor, ylim = ylim, type = 'l',main = title, ylab = 'correlation error',xlab='')
+  text(x=1:length(bcor), y = (mcor-cor) + .1, labels = labs, cex = 0.8, srt = 60)
+}
+
 
 #' Function to simulate agreement patterns for record pairs from a mixture model
 #' @param cor_match correlation in 0/1 agreement fields for record pairs constituting the same individual (matches).
