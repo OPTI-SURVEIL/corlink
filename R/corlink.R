@@ -4,6 +4,9 @@
 #' 
 #' @section corlink functions:
 #' linkd 
+#' mcorr
+#' bcorr
+#' corplot
 #'
 #' @docType package
 #' @name corlink
