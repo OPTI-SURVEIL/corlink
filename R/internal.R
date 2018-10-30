@@ -443,7 +443,7 @@ corplot = function(fit,title=NULL){
   labs = names(bcor)
   ylim = c(min(mcor-bcor) - .25, max(mcor-bcor) + .25)
   plot(mcor-bcor, ylim = ylim, type = 'l',main = title, ylab = 'correlation error',xlab='')
-  text(x=1:length(bcor), y = (mcor-cor) + .1, labels = labs, cex = 0.8, srt = 60)
+  text(x=1:length(bcor), y = (mcor-bcor) + .1, labels = labs, cex = 0.8, srt = 60)
 }
 
 
